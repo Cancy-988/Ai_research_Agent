@@ -1,119 +1,111 @@
-import { useState, useCallback } from 'react';
-import { ResearchState, ResearchDepth, AnalyzeResponse, AnalysisStep } from '@/types';
+import { useState, useCallback } from "react";
+import { ResearchState, ResearchDepth, AnalyzeResponse, AnalysisStep } from "@/types";
 
 const INITIAL_STEPS: AnalysisStep[] = [
-  { id: 'fetch', label: 'Retrieving Company Profile', status: 'pending' },
-  { id: 'swot', label: 'Analyzing Strengths & Risks', status: 'pending' },
-  { id: 'score', label: 'Calculating Investment Score', status: 'pending' },
-  { id: 'synthesize', label: 'Formatting Investment Recommendation', status: 'pending' },
+  { id: "research", label: "Fetching Financial Data", status: "pending" },
+  { id: "news", label: "Scanning News Sources", status: "pending" },
+  { id: "sentiment", label: "Classifying News Sentiment", status: "pending" },
+  { id: "analysis", label: "Running AI Analysis", status: "pending" },
+  { id: "decision", label: "Validating Report", status: "pending" },
 ];
 
+type FullState = ResearchState & { apiReport: AnalyzeResponse | null };
+
 export function useResearch() {
-  const [state, setState] = useState<ResearchState & { apiReport: AnalyzeResponse | null }>({
-    status: 'idle',
+  const [state, setState] = useState<FullState>({
+    status: "idle",
     currentStepIndex: 0,
     steps: INITIAL_STEPS,
-    report: null, // Legacy field
-    apiReport: null, // New field for Gemini structured response
+    report: null,
+    apiReport: null,
     error: null,
   });
 
-  const runAnalysis = useCallback(async (ticker: string, depth: ResearchDepth, context?: string) => {
-    if (!ticker.trim()) {
-      setState(prev => ({ ...prev, error: 'Company name is required' }));
-      return;
-    }
-
-    // Reset state for new run
-    setState({
-      status: 'loading',
-      currentStepIndex: 0,
-      steps: INITIAL_STEPS.map(step => ({ ...step, status: 'pending', message: undefined })),
-      report: null,
-      apiReport: null,
-      error: null,
-    });
-
-    // We'll manage progress animations while the real API request runs
-    let active = true;
-    const progressTimers: NodeJS.Timeout[] = [];
-
-    const triggerStepProgress = async () => {
-      if (!active) return;
-      // 1. Fetching Profile
-      setState(prev => updateStep(prev, 0, 'running', 'Connecting to Gemini 2.5 Flash...'));
-      
-      progressTimers.push(setTimeout(() => {
-        if (!active) return;
-        setState(prev => updateStep(prev, 0, 'completed', 'Profile retrieved.'));
-        setState(prev => updateStep(prev, 1, 'running', 'Extracting core business factors...'));
-      }, 2000));
-
-      progressTimers.push(setTimeout(() => {
-        if (!active) return;
-        setState(prev => updateStep(prev, 1, 'completed', 'Strengths and risks mapped.'));
-        setState(prev => updateStep(prev, 2, 'running', 'Determining capital risk score...'));
-      }, 4000));
-
-      progressTimers.push(setTimeout(() => {
-        if (!active) return;
-        setState(prev => updateStep(prev, 2, 'completed', 'Score calculated.'));
-        setState(prev => updateStep(prev, 3, 'running', 'Writing final analysis report...'));
-      }, 6000));
-    };
-
-    triggerStepProgress();
-
-    try {
-      // Perform the actual API call
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ company: ticker }),
-      });
-
-      active = false;
-      progressTimers.forEach(clearTimeout);
-
-      if (!response.ok) {
-        let errMsg = 'Failed to analyze company';
-        try {
-          const errData = await response.json();
-          errMsg = errData.error || errMsg;
-        } catch {}
-        throw new Error(errMsg);
+  const runAnalysis = useCallback(
+    async (ticker: string, depth: ResearchDepth, context?: string) => {
+      if (!ticker.trim()) {
+        setState((p) => ({ ...p, error: "Company name is required" }));
+        return;
       }
 
-      const resultData = (await response.json()) as AnalyzeResponse;
+      setState({
+        status: "loading",
+        currentStepIndex: 0,
+        steps: INITIAL_STEPS.map((s) => ({ ...s, status: "pending", message: undefined })),
+        report: null,
+        apiReport: null,
+        error: null,
+      });
 
-      setState(prev => ({
-        ...prev,
-        status: 'success',
-        currentStepIndex: 4,
-        steps: prev.steps.map(step => ({ ...step, status: 'completed' })),
-        apiReport: resultData,
-      }));
+      let active = true;
+      const timers: NodeJS.Timeout[] = [];
 
-    } catch (err: any) {
-      active = false;
-      progressTimers.forEach(clearTimeout);
-      
-      setState(prev => ({
-        ...prev,
-        status: 'failed',
-        steps: prev.steps.map(step => 
-          step.status === 'running' ? { ...step, status: 'failed', message: 'Failed here.' } : step
-        ),
-        error: err?.message || 'An error occurred during Gemini analysis.',
-      }));
-    }
-  }, []);
+      // Simulate step progress (aligned with actual 5-node pipeline timings)
+      const stepTimings: [number, number, string][] = [
+        [0, 0, "Connecting to Yahoo Finance..."],
+        [1, 3000, "Scanning NewsAPI..."],
+        [2, 6000, "Running LangChain sentiment model..."],
+        [3, 9500, "Invoking Gemini AI..."],
+        [4, 14000, "Validating & formatting report..."],
+      ];
+
+      for (const [idx, delay, msg] of stepTimings) {
+        timers.push(
+          setTimeout(() => {
+            if (!active) return;
+            setState((p) => step(p, idx, "running", msg));
+            if (idx > 0) setState((p) => step(p, idx - 1, "completed"));
+          }, delay)
+        );
+      }
+
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ company: ticker, depth, context }),
+        });
+
+        active = false;
+        timers.forEach(clearTimeout);
+
+        if (!res.ok) {
+          let msg = "Analysis failed";
+          try {
+            const e = await res.json();
+            msg = e.error ?? msg;
+          } catch { /* ignore */ }
+          throw new Error(msg);
+        }
+
+        const data = (await res.json()) as AnalyzeResponse;
+
+        setState((p) => ({
+          ...p,
+          status: "success",
+          currentStepIndex: 5,
+          steps: p.steps.map((s) => ({ ...s, status: "completed" })),
+          apiReport: data,
+        }));
+      } catch (err: any) {
+        active = false;
+        timers.forEach(clearTimeout);
+        setState((p) => ({
+          ...p,
+          status: "failed",
+          steps: p.steps.map((s) =>
+            s.status === "running" ? { ...s, status: "failed", message: "Failed." } : s
+          ),
+          error: err?.message ?? "An unexpected error occurred.",
+        }));
+      }
+    },
+    []
+  );
 
   const resetResearch = useCallback(() => {
     setState({
-      status: 'idle',
+      status: "idle",
       currentStepIndex: 0,
       steps: INITIAL_STEPS,
       report: null,
@@ -122,29 +114,16 @@ export function useResearch() {
     });
   }, []);
 
-  return {
-    ...state,
-    runAnalysis,
-    resetResearch,
-  };
+  return { ...state, runAnalysis, resetResearch };
 }
 
-function updateStep(
-  state: ResearchState & { apiReport: AnalyzeResponse | null },
+function step(
+  state: FullState,
   index: number,
-  status: AnalysisStep['status'],
+  status: AnalysisStep["status"],
   message?: string
-): ResearchState & { apiReport: AnalyzeResponse | null } {
-  const nextSteps = [...state.steps];
-  nextSteps[index] = {
-    ...nextSteps[index],
-    status,
-    message,
-  };
-
-  return {
-    ...state,
-    currentStepIndex: index,
-    steps: nextSteps,
-  };
+): FullState {
+  const steps = [...state.steps];
+  steps[index] = { ...steps[index], status, message };
+  return { ...state, currentStepIndex: index, steps };
 }

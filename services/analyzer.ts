@@ -1,29 +1,23 @@
-import { AnalyzeRequest, AnalyzeResponse } from '@/types';
-import { investmentGraph } from '@/agents/investmentGraph';
+import { AnalyzeRequest, AnalyzeResponse } from "@/types";
+import { investmentGraph } from "@/agents/investmentGraph";
 
-/**
- * Service responsible for orchestrating company investment analysis.
- * Integrates directly with the LangGraph state graph workflow.
- */
 export class AnalyzerService {
-  /**
-   * Run the investment analysis for the specified company using LangGraph.
-   * @param data The analysis request containing the company name.
-   */
   static async analyzeCompany(data: AnalyzeRequest): Promise<AnalyzeResponse> {
-    console.log(`[Analyzer Service] Invoking LangGraph workflow for company: "${data.company}"`);
-    
-    // Invoke the compiled state graph workflow
+    console.log(`[Analyzer] Starting LangGraph pipeline for "${data.company}" (depth: ${data.depth ?? "quick"})`);
+
     const result = await investmentGraph.invoke({
       company: data.company,
+      depth: data.depth ?? "quick",
+      context: data.context,
+      newsData: [],
+      isAiSynthesized: false,
     });
 
-    // Check for output validation in final state
     if (!result.finalReport) {
-      throw new Error('LangGraph Workflow: Failed to generate the final analysis report.');
+      throw new Error("LangGraph pipeline did not produce a final report.");
     }
 
-    console.log(`[Analyzer Service] LangGraph analysis completed successfully.`);
+    console.log(`[Analyzer] Pipeline complete.`);
     return result.finalReport;
   }
 }

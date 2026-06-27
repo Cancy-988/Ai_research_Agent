@@ -1,21 +1,45 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Brand colours ── */
   --color-bg-main: #070a13;
   --color-bg-card: #0f1524;
   --color-bg-card-hover: #161e31;
   --color-border-main: #1e293b;
   --color-border-light: #334155;
-  
+
   --color-brand-emerald: #10b981;
   --color-brand-emerald-hover: #059669;
   --color-brand-indigo: #6366f1;
   --color-brand-indigo-hover: #4f46e5;
-  
+
+  /* ── Fonts ── */
   --font-sans: var(--font-outfit), var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
+
+  /* ── Custom animations ── */
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-pulse-subtle: pulse-subtle 2s ease-in-out infinite;
+  --animate-bounce-subtle: bounce-subtle 1.8s ease-in-out infinite;
 }
 
+/* ── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.82; }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────────── */
 :root {
   --background: #070a13;
   --foreground: #f8fafc;
@@ -28,12 +52,12 @@ body {
   min-height: 100vh;
 }
 
-/* Glassmorphism utility classes */
+/* ── Glassmorphism ──────────────────────────────────────────────────────────── */
 .glass-panel {
-  background: rgba(15, 21, 36, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 41, 59, 0.5);
+  background: rgba(15, 21, 36, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(30, 41, 59, 0.55);
 }
 
 .glass-card {
@@ -43,21 +67,14 @@ body {
   border: 1px solid rgba(30, 41, 59, 0.3);
 }
 
-/* Premium scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #070a13; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
 
-::-webkit-scrollbar-track {
-  background: #070a13;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+/* ── PDF print styles ───────────────────────────────────────────────────────── */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  .glass-panel, .glass-card { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
 }

@@ -1,55 +1,76 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { AnalyzerService } from '@/services/analyzer';
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { AnalyzerService } from "@/services/analyzer";
+import { analysisCache } from "@/lib/cache";
+import { checkRateLimit } from "@/lib/rateLimit";
 
-// Define schema for input validation using Zod
-const analyzeRequestSchema = z.object({
-  company: z.string({
-    required_error: 'Company name is required',
-    invalid_type_error: 'Company name must be a string',
-  }).trim().min(1, 'Company name cannot be empty'),
+const schema = z.object({
+  company: z.string().trim().min(2, "Company name must be at least 2 characters"),
+  depth: z.enum(["quick", "deep"]).default("quick"),
+  context: z.string().max(500).optional(),
 });
 
-/**
- * POST handler for /api/analyze
- * Analyzes the requested company and returns a detailed investment dossier.
- */
 export async function POST(req: NextRequest) {
-  try {
-    // 1. Parse request body
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json(
-        { error: 'Invalid JSON request body' },
-        { status: 400 }
-      );
-    }
+  // ── Rate limiting ─────────────────────────────────────────────────────────
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
 
-    // 2. Validate input fields using Zod schema
-    const validationResult = analyzeRequestSchema.safeParse(body);
-    
-    if (!validationResult.success) {
-      // Map Zod errors to a clear readable format
-      const errorMessages = validationResult.error.errors.map(err => err.message).join(', ');
-      return NextResponse.json(
-        { error: errorMessages },
-        { status: 400 }
-      );
-    }
-
-    // 3. Delegate to the Service Layer
-    const result = await AnalyzerService.analyzeCompany(validationResult.data);
-
-    // 4. Return success response
-    return NextResponse.json(result, { status: 200 });
-
-  } catch (error: any) {
-    console.error('Error in /api/analyze route:', error);
+  const rate = checkRateLimit(ip);
+  if (!rate.allowed) {
     return NextResponse.json(
-      { error: 'An internal server error occurred while processing the analysis.' },
-      { status: 500 }
+      { error: "Rate limit exceeded. Please wait before retrying." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rate.resetInMs / 1000)) },
+      }
     );
+  }
+
+  // ── Parse & validate ──────────────────────────────────────────────────────
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.errors.map((e) => e.message).join(", ") },
+      { status: 400 }
+    );
+  }
+
+  const { company, depth, context } = parsed.data;
+  const cacheKey = `${company.toLowerCase().trim()}-${depth}`;
+
+  // ── Cache check ───────────────────────────────────────────────────────────
+  const cached = analysisCache.get(cacheKey);
+  if (cached) {
+    console.log(`[API] Cache HIT — ${cacheKey}`);
+    return NextResponse.json({ ...cached, meta: { ...cached.meta, cacheHit: true } });
+  }
+
+  console.log(`[API] Cache MISS — ${cacheKey}`);
+
+  // ── Run pipeline ──────────────────────────────────────────────────────────
+  try {
+    const result = await AnalyzerService.analyzeCompany({ company, depth, context });
+    analysisCache.set(cacheKey, result);
+    return NextResponse.json(result, { status: 200 });
+  } catch (err: any) {
+    console.error("[API] Pipeline error:", err?.message ?? err);
+
+    if (err?.message?.includes("GEMINI_API_KEY") || err?.message?.includes("API_KEY")) {
+      return NextResponse.json({ error: "AI service misconfigured — check GEMINI_API_KEY." }, { status: 500 });
+    }
+    if (err?.message?.includes("timeout") || err?.code === "ETIMEDOUT") {
+      return NextResponse.json({ error: "Analysis timed out. Try Quick mode." }, { status: 504 });
+    }
+
+    return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
   }
 }

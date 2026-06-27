@@ -1,7 +1,3 @@
-/**
- * Types and interfaces for the AI Investment Research Agent.
- */
-
 export type ResearchDepth = 'quick' | 'deep';
 
 export interface CompanyAnalysisInput {
@@ -37,14 +33,14 @@ export interface SWOTAnalysis {
 }
 
 export interface SentimentAnalysis {
-  score: number; // -1 to 1 scale
+  score: number;
   label: 'positive' | 'neutral' | 'negative';
   summary: string;
 }
 
 export interface InvestmentRecommendation {
   action: 'BUY' | 'HOLD' | 'SELL';
-  confidence: number; // 0 to 100
+  confidence: number;
   targetPrice?: number;
   rationale: string;
 }
@@ -68,23 +64,25 @@ export interface ResearchState {
   error: string | null;
 }
 
-export interface AnalyzeRequest {
-  company: string;
+// ─── News ─────────────────────────────────────────────────────────────────────
+
+export interface NewsItem {
+  headline: string;
+  summary: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  sentimentScore?: number;
+  source: string;
+  url?: string;
+  publishedAt: string;
+  isAiSynthesized: boolean;
 }
 
-export interface AnalyzeResponse {
-  company: string;
-  overview: string;
-  strengths: string[];
-  risks: string[];
-  investmentScore: number;
-  recommendation: 'INVEST' | 'PASS';
-  reasoning: string;
-}
+// ─── Financial Profile (extended from CompanyFinancialProfile) ─────────────────
 
 export interface CompanyFinancialProfile {
   symbol: string;
   name: string;
+  exchange?: string;
   industry?: string;
   sector?: string;
   marketCap?: number;
@@ -92,5 +90,73 @@ export interface CompanyFinancialProfile {
   peRatio?: number;
   eps?: number;
   dividendYield?: number;
+  currentPrice?: number;
+  priceChange1D?: number;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  beta?: number;
+  grossMargin?: number;
+  operatingMargin?: number;
+  returnOnEquity?: number;
+  debtToEquity?: number;
+  freeCashFlow?: number;
   summary?: string;
+}
+
+// ─── Sector Benchmarking ──────────────────────────────────────────────────────
+
+export interface SectorBenchmark {
+  sector: string;
+  medianPE: number;
+  medianDividendYield: number;
+  companyPEvsMedian: 'above' | 'below' | 'inline' | 'unknown';
+}
+
+// ─── API Contracts ────────────────────────────────────────────────────────────
+
+export interface AnalyzeRequest {
+  company: string;
+  depth?: ResearchDepth;
+  context?: string;
+}
+
+export interface AnalyzeResponse {
+  company: string;
+  ticker?: string;
+  overview: string;
+  strengths: string[];
+  risks: string[];
+  investmentScore: number;
+  recommendation: 'INVEST' | 'PASS';
+  reasoning: string;
+  financialProfile?: CompanyFinancialProfile | null;
+  newsItems?: NewsItem[];
+  sectorBenchmark?: SectorBenchmark | null;
+  meta: {
+    generatedAt: string;
+    depth: ResearchDepth;
+    dataSource: 'yahoo_finance' | 'ai_only';
+    newsSource: 'newsapi' | 'ai_synthesized';
+    cacheHit: boolean;
+  };
+}
+
+// ─── Comparison ───────────────────────────────────────────────────────────────
+
+export interface CompareResponse {
+  companies: [AnalyzeResponse, AnalyzeResponse];
+  winner: string;
+  delta: number;
+}
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+export interface WatchlistItem {
+  v: 1;
+  ticker: string;
+  company: string;
+  score: number;
+  recommendation: 'INVEST' | 'PASS';
+  analyzedAt: string;
+  cachedReport: AnalyzeResponse;
 }

@@ -1,13 +1,13 @@
 import { Annotation } from "@langchain/langgraph";
-import { AnalyzeResponse, CompanyFinancialProfile } from "@/types";
+import { AnalyzeResponse, CompanyFinancialProfile, NewsItem, ResearchDepth } from "@/types";
 
-/**
- * Shared state schema definition for the Investment LangGraph workflow.
- * Decoupled from the graph build configuration to avoid circular dependencies.
- */
 export const InvestmentGraphState = Annotation.Root({
   company: Annotation<string>(),
+  depth: Annotation<ResearchDepth>(),
+  context: Annotation<string | undefined>(),
   financialData: Annotation<CompanyFinancialProfile | null>(),
+  newsData: Annotation<NewsItem[]>(),
+  isAiSynthesized: Annotation<boolean>(),
   prompt: Annotation<string>(),
   rawAnalysis: Annotation<string>(),
   finalReport: Annotation<AnalyzeResponse | null>(),
