@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.errors.map((e) => e.message).join(", ") },
+      { error: parsed.error.issues.map((e) => e.message).join(", ") },
       { status: 400 }
     );
   }
@@ -62,15 +62,31 @@ export async function POST(req: NextRequest) {
     analysisCache.set(cacheKey, result);
     return NextResponse.json(result, { status: 200 });
   } catch (err: any) {
-    console.error("[API] Pipeline error:", err?.message ?? err);
+    const msg: string = err?.message ?? String(err);
+    console.error("[API] Pipeline error:", msg);
 
-    if (err?.message?.includes("GEMINI_API_KEY") || err?.message?.includes("API_KEY")) {
-      return NextResponse.json({ error: "AI service misconfigured — check GEMINI_API_KEY." }, { status: 500 });
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here") {
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY is missing. Add it to .env and restart the server." },
+        { status: 500 }
+      );
     }
-    if (err?.message?.includes("timeout") || err?.code === "ETIMEDOUT") {
+    if (msg.includes("API_KEY") || msg.includes("API key") || msg.includes("INVALID_ARGUMENT") || msg.includes("403")) {
+      return NextResponse.json(
+        { error: "Gemini API key is invalid. Get a valid key from aistudio.google.com and update .env → GEMINI_API_KEY." },
+        { status: 500 }
+      );
+    }
+    if (msg.includes("not found") && msg.includes("model")) {
+      return NextResponse.json(
+        { error: "Gemini model not found. The model name may be wrong or not available for your API key." },
+        { status: 500 }
+      );
+    }
+    if (msg.includes("timeout") || err?.code === "ETIMEDOUT") {
       return NextResponse.json({ error: "Analysis timed out. Try Quick mode." }, { status: 504 });
     }
 
-    return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: `Analysis failed: ${msg.slice(0, 200)}` }, { status: 500 });
   }
 }

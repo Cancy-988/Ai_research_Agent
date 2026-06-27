@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { AnalyzeResponse } from "@/types";
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -20,38 +20,39 @@ export class GeminiService {
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: "object",
+          type: SchemaType.OBJECT,
           properties: {
-            company: { 
-              type: "string", 
-              description: "The name of the company analyzed (e.g. Tesla, Inc.)" 
+            company: {
+              type: SchemaType.STRING,
+              description: "The name of the company analyzed (e.g. Tesla, Inc.)"
             },
-            overview: { 
-              type: "string", 
-              description: "A comprehensive, institutional-grade business overview of the firm and its industry position." 
+            overview: {
+              type: SchemaType.STRING,
+              description: "A comprehensive, institutional-grade business overview of the firm and its industry position."
             },
             strengths: {
-              type: "array",
-              items: { type: "string" },
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
               description: "Top 3 to 5 key internal competitive strengths and technological moats."
             },
             risks: {
-              type: "array",
-              items: { type: "string" },
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
               description: "Top 3 to 5 key structural, geopolitical, or macroeconomic risks."
             },
-            investmentScore: { 
-              type: "integer", 
-              description: "A comprehensive score from 0 (extremely risky/avoid) to 100 (high conviction growth)." 
+            investmentScore: {
+              type: SchemaType.INTEGER,
+              description: "A comprehensive score from 0 (extremely risky/avoid) to 100 (high conviction growth)."
             },
-            recommendation: { 
-              type: "string", 
-              enum: ["INVEST", "PASS"], 
-              description: "Actionable recommendation signal: INVEST or PASS." 
+            recommendation: {
+              type: SchemaType.STRING,
+              format: "enum",
+              enum: ["INVEST", "PASS"],
+              description: "Actionable recommendation signal: INVEST or PASS."
             },
-            reasoning: { 
-              type: "string", 
-              description: "In-depth mathematical and fundamental logic justifying the investment score and recommendation." 
+            reasoning: {
+              type: SchemaType.STRING,
+              description: "In-depth mathematical and fundamental logic justifying the investment score and recommendation."
             }
           },
           required: ["company", "overview", "strengths", "risks", "investmentScore", "recommendation", "reasoning"]
