@@ -114,7 +114,18 @@ export function useResearch() {
     });
   }, []);
 
-  return { ...state, runAnalysis, resetResearch };
+  const loadCachedReport = useCallback((report: AnalyzeResponse) => {
+    setState({
+      status: "success",
+      currentStepIndex: 5,
+      steps: INITIAL_STEPS.map((s) => ({ ...s, status: "completed" })),
+      report: null,
+      apiReport: report,
+      error: null,
+    });
+  }, []);
+
+  return { ...state, runAnalysis, resetResearch, loadCachedReport };
 }
 
 function step(

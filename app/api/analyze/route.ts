@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60; // Vercel max for Hobby plan
 import { z } from "zod";
 import { AnalyzerService } from "@/services/analyzer";
 import { analysisCache } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { generateShareHash, storeSharedReport } from "@/lib/shareCache";
 
 const schema = z.object({
   company: z.string().trim().min(2, "Company name must be at least 2 characters"),
@@ -59,8 +62,11 @@ export async function POST(req: NextRequest) {
   // ── Run pipeline ──────────────────────────────────────────────────────────
   try {
     const result = await AnalyzerService.analyzeCompany({ company, depth, context });
-    analysisCache.set(cacheKey, result);
-    return NextResponse.json(result, { status: 200 });
+    const shareHash = generateShareHash(company, result.ticker);
+    const withHash = { ...result, meta: { ...result.meta, shareHash } };
+    storeSharedReport(shareHash, withHash);
+    analysisCache.set(cacheKey, withHash);
+    return NextResponse.json(withHash, { status: 200 });
   } catch (err: any) {
     const msg: string = err?.message ?? String(err);
     console.error("[API] Pipeline error:", msg);
@@ -81,6 +87,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Gemini model not found. The model name may be wrong or not available for your API key." },
         { status: 500 }
+      );
+    }
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+      return NextResponse.json(
+        { error: "Gemini API quota exceeded. The free tier allows ~20 requests/day. Wait a minute and try again, or switch to Quick mode." },
+        { status: 429 }
       );
     }
     if (msg.includes("timeout") || err?.code === "ETIMEDOUT") {

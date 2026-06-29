@@ -138,6 +138,7 @@ export interface AnalyzeResponse {
     dataSource: 'yahoo_finance' | 'ai_only';
     newsSource: 'newsapi' | 'ai_synthesized';
     cacheHit: boolean;
+    shareHash?: string;
   };
 }
 

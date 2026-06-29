@@ -95,11 +95,14 @@ export default function ActionBar({ report, onReset }: Props) {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}?q=${encodeURIComponent(report.company)}`;
+    const hash = report.meta?.shareHash;
+    const url = hash
+      ? `${window.location.origin}/report/${hash}`
+      : `${window.location.origin}?q=${encodeURIComponent(report.company)}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
-      // fallback
+      // fallback: select prompt
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

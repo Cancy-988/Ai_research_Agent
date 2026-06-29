@@ -1,12 +1,31 @@
 "use client";
-import { RiLineChartLine, RiRefreshLine } from "react-icons/ri";
+import { useEffect, useState } from "react";
+import { RiLineChartLine, RiRefreshLine, RiBookmarkLine } from "react-icons/ri";
 
 interface Props {
   status: "idle" | "loading" | "success" | "failed";
   onReset?: () => void;
+  onWatchlist?: () => void;
 }
 
-export default function Header({ status, onReset }: Props) {
+export default function Header({ status, onReset, onWatchlist }: Props) {
+  const [watchlistCount, setWatchlistCount] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      try {
+        const raw = localStorage.getItem("watchlist");
+        const list = raw ? JSON.parse(raw) : [];
+        setWatchlistCount(Array.isArray(list) ? list.length : 0);
+      } catch { setWatchlistCount(0); }
+    };
+    update();
+    window.addEventListener("storage", update);
+    // Poll every 2s to catch same-tab changes
+    const t = setInterval(update, 2000);
+    return () => { window.removeEventListener("storage", update); clearInterval(t); };
+  }, []);
+
   return (
     <header className="w-full border-b border-border-main bg-bg-main/80 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -27,6 +46,21 @@ export default function Header({ status, onReset }: Props) {
 
         {/* Right */}
         <div className="flex items-center gap-3">
+          {/* Watchlist button */}
+          <button
+            onClick={onWatchlist}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700 transition-all"
+            title="Open Watchlist"
+          >
+            <RiBookmarkLine className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Watchlist</span>
+            {watchlistCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold bg-amber-500 text-white rounded-full">
+                {watchlistCount > 9 ? "9+" : watchlistCount}
+              </span>
+            )}
+          </button>
+
           {status !== "idle" && (
             <button
               onClick={onReset}
