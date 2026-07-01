@@ -57,7 +57,6 @@ NEWS_API_KEY=your_newsapi_key_here
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
 
 ### Production build
 
