@@ -1,5 +1,7 @@
-Link :- equitylens-ashy.vercel.app
+
 # AI Investment Research Agent
+
+ ## Live Link : [https://equitylens-ashy.vercel.app](https://equitylens-ashy.vercel.app)
 
 An AI-powered investment research app that takes a company name, gathers market and news context, and returns an INVEST or PASS recommendation with the reasoning behind it.
 
