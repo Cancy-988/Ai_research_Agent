@@ -57,6 +57,19 @@ interface Props {
 }
 
 export default function FinancialMetricsGrid({ profile, benchmark }: Props) {
+  const hasRenderableMetrics = !!profile && [
+    profile.marketCap,
+    profile.revenue,
+    profile.peRatio,
+    profile.eps,
+    profile.dividendYield,
+    profile.beta,
+    profile.operatingMargin,
+    profile.returnOnEquity,
+    profile.sector,
+    profile.industry,
+  ].some((v) => v !== undefined && v !== null && v !== "");
+
   const metrics: MetricCardProps[] = [
     {
       label: "Market Cap",
@@ -126,7 +139,7 @@ export default function FinancialMetricsGrid({ profile, benchmark }: Props) {
         <span className="text-[10px] text-slate-500 font-mono">Yahoo Finance · Real-time</span>
       </div>
 
-      {!profile ? (
+      {!hasRenderableMetrics ? (
         <div className="flex items-center justify-center h-40">
           <div className="text-center">
             <p className="text-sm text-slate-500">Financial data unavailable</p>

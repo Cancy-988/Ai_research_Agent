@@ -9,6 +9,25 @@ import { CompanyFinancialProfile } from "@/types";
 
 const YF_OPTS = { validateResult: false } as const;
 
+function hasUsableFinancialData(profile: CompanyFinancialProfile | null): boolean {
+  if (!profile) return false;
+
+  const populated = [
+    profile.marketCap,
+    profile.revenue,
+    profile.peRatio,
+    profile.eps,
+    profile.currentPrice,
+    profile.sector,
+    profile.industry,
+    profile.operatingMargin,
+    profile.returnOnEquity,
+    profile.debtToEquity,
+  ].filter((v) => v !== undefined && v !== null && v !== "").length;
+
+  return populated >= 3;
+}
+
 // ─── LangChain Tools ──────────────────────────────────────────────────────────
 
 const getStockQuoteTool = tool(
@@ -202,6 +221,23 @@ export async function researchNode(
           freeCashFlow: profileResult.freeCashFlow,
           summary: profileResult.description,
         };
+
+        if (!hasUsableFinancialData(financialData)) {
+          console.warn("[Node: Research] Tool output was sparse, retrying with direct Yahoo fetch.");
+          const direct = await directFetch(ticker, query);
+          if (direct) {
+            financialData = {
+              ...financialData,
+              ...direct,
+            };
+          }
+        }
+
+        if (!hasUsableFinancialData(financialData)) {
+          console.warn("[Node: Research] Financial profile still sparse after fallback.");
+          financialData = null;
+        }
+
         console.log(`[Node: Research] Tool-calling complete for ${ticker} — got ${Object.keys(quoteResult).length} quote fields`);
       } else {
         console.warn("[Node: Research] Tool-calling returned empty results, falling back to direct fetch.");

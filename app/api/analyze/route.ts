@@ -13,6 +13,22 @@ const schema = z.object({
   context: z.string().max(500).optional(),
 });
 
+function hasUsableFinancialData(profile: any): boolean {
+  if (!profile) return false;
+
+  return [
+    profile.marketCap,
+    profile.revenue,
+    profile.peRatio,
+    profile.eps,
+    profile.currentPrice,
+    profile.sector,
+    profile.industry,
+    profile.operatingMargin,
+    profile.returnOnEquity,
+  ].some((v) => v !== undefined && v !== null && v !== "");
+}
+
 export async function POST(req: NextRequest) {
   // ── Rate limiting ─────────────────────────────────────────────────────────
   const ip =
@@ -53,8 +69,12 @@ export async function POST(req: NextRequest) {
   // ── Cache check ───────────────────────────────────────────────────────────
   const cached = analysisCache.get(cacheKey);
   if (cached) {
-    console.log(`[API] Cache HIT — ${cacheKey}`);
-    return NextResponse.json({ ...cached, meta: { ...cached.meta, cacheHit: true } });
+    const cachedHasSparseFinance = cached?.financialProfile && !hasUsableFinancialData(cached.financialProfile);
+    if (!cachedHasSparseFinance) {
+      console.log(`[API] Cache HIT — ${cacheKey}`);
+      return NextResponse.json({ ...cached, meta: { ...cached.meta, cacheHit: true } });
+    }
+    console.log(`[API] Cache SKIP (sparse financial profile) — ${cacheKey}`);
   }
 
   console.log(`[API] Cache MISS — ${cacheKey}`);
