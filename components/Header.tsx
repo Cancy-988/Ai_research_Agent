@@ -1,6 +1,9 @@
 "use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { RiLineChartLine, RiRefreshLine, RiBookmarkLine } from "react-icons/ri";
+import { RiLineChartLine, RiRefreshLine, RiBookmarkLine, RiUser3Line, RiLogoutBoxRLine } from "react-icons/ri";
+import { clearAuthSession } from "@/lib/auth";
 
 interface Props {
   status: "idle" | "loading" | "success" | "failed";
@@ -9,6 +12,7 @@ interface Props {
 }
 
 export default function Header({ status, onReset, onWatchlist }: Props) {
+  const router = useRouter();
   const [watchlistCount, setWatchlistCount] = useState(0);
 
   useEffect(() => {
@@ -46,6 +50,15 @@ export default function Header({ status, onReset, onWatchlist }: Props) {
 
         {/* Right */}
         <div className="flex items-center gap-3">
+          <Link
+            href="/profile"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700 transition-all"
+            title="Open Profile"
+          >
+            <RiUser3Line className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Profile</span>
+          </Link>
+
           {/* Watchlist button */}
           <button
             onClick={onWatchlist}
@@ -70,6 +83,18 @@ export default function Header({ status, onReset, onWatchlist }: Props) {
               Reset
             </button>
           )}
+
+          <button
+            onClick={() => {
+              clearAuthSession();
+              router.replace("/login");
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-rose-300 hover:text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/30 transition-all"
+            title="Logout"
+          >
+            <RiLogoutBoxRLine className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Logout</span>
+          </button>
 
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 rounded-full border border-slate-800">
             <span className={`w-2 h-2 rounded-full transition-colors ${
