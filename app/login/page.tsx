@@ -96,7 +96,6 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
 
-        <p className="text-xs text-slate-500 mt-4">Session is stored in browser cookies for local development auth.</p>
 
         <p className="text-sm text-slate-400 mt-5">
           New to EquityLens?{" "}
